@@ -323,10 +323,8 @@ header.top { flex-wrap: wrap; }
     fs.value = fields.some(function (f) { return f.id === fv; }) ? fv : fields[0].id;
   }
   function updateAnalyzeBtn() {
-    var b = $("#analyzeBtn"), n = $("#availNote");
-    b.disabled = !(state.photo && navigator.onLine) || state.phase === "loading";
-    if (!navigator.onLine) { n.hidden = false; n.className = "note warn"; n.textContent = "Таҳлил учун интернет керак. Тарих ва касалликлар китоби интернетсиз ҳам очилади."; }
-    else n.hidden = true;
+    $("#analyzeBtn").disabled = !state.photo || state.phase === "loading";
+    $("#availNote").hidden = true;
   }
   function loadPhoto(file) {
     if (!file) return;
@@ -370,12 +368,14 @@ header.top { flex-wrap: wrap; }
     }).then(function (resp) {
       if (resp.status === 429) throw { code: "rate_limited" };
       if (resp.status === 422) throw { code: "invalid_json" };
+      if (resp.status === 500) throw { code: "server_not_configured" };
+      if (resp.status === 404) throw { code: "no_server" };
       if (!resp.ok) throw { code: "upstream_error" };
       return resp.json();
     }).then(function (j) { return j.data; }, function (e) {
       if (e && e.name === "AbortError") throw { code: "cancelled" };
       if (e && e.code) throw e;
-      throw { code: "upstream_error" };
+      throw { code: "network" };
     });
   }
   function normalize(d) {
@@ -404,7 +404,10 @@ header.top { flex-wrap: wrap; }
       image_rejected: "Суратни AI қабул қилмади. Бошқа сурат танланг.",
       invalid_json: "Жавобни ўқиб бўлмади. Суратни қайта олиб, яна уриниб кўринг.",
       session_expired: "Сеанс тугаган. Қайта киринг.",
-      refused: "Бу суратни таҳлил қилиб бўлмади. Бошқа барг суратини юборинг."
+      refused: "Бу суратни таҳлил қилиб бўлмади. Бошқа барг суратини юборинг.",
+      network: "Серверга уланиб бўлмади. Интернетни текширинг ва қайта уриниб кўринг.",
+      server_not_configured: "Сервер ҳали созланмаган: AI калити қўшилмаган. Лойиҳа эгасига айтинг.",
+      no_server: "Таҳлил сервери топилмади. Лойиҳа эгасига айтинг."
     })[code] || "Таҳлил вақтида узилиш бўлди. Қайта уриниб кўринг.";
   }
   function analyze() {
@@ -565,8 +568,6 @@ header.top { flex-wrap: wrap; }
 
   /* ---------- Ишга тушириш ---------- */
   function init() { fillSelects(); showTab(location.hash.slice(1) || "scan"); updateAnalyzeBtn(); }
-  window.addEventListener("online", updateAnalyzeBtn);
-  window.addEventListener("offline", updateAnalyzeBtn);
   fetch("diseases.json").then(function (r) { return r.json(); }).then(function (db) {
     CROPS = db.crops; DB_APPROVED = !!db.approved; DISEASES = db.diseases; DIS = {};
     DISEASES.forEach(function (d) { DIS[d.id] = d; });
