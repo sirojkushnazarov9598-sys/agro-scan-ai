@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AGRO SCAN AI</title>
+<meta name="description" content="Ўсимлик баргини суратга олинг, сунъий интеллект касалликни аниқлаб, чора кўрсатади.">
+<meta name="theme-color" content="#1E6B3B">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AGRO SCAN">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Onest:wght@400;500;600&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: one phone-width column, five-tab bar fixed at the bottom; the scan tab is a viewfinder with corner brackets, the other tabs are cards on a green-tinted ground. */
+:root {
+  --bg: #EDF1EA;
+  --surface: #FFFFFF;
+  --surface-2: #E1E9DD;
+  --ink: #13231A;
+  --ink-2: #4A5C50;
+  --line: #C9D5C5;
+  --leaf: #1E6B3B;
+  --leaf-ink: #FFFFFF;
+  --leaf-soft: #D5EAD9;
+  --warn: #8F5400;
+  --warn-soft: #F6E4BF;
+  --bad: #A63223;
+  --bad-soft: #F5D8D1;
+  --muted-soft: #E3E6E1;
+  --f-display: "Unbounded", "Onest", system-ui, sans-serif;
+  --f-body: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1711; --surface: #16231A; --surface-2: #1F3025; --ink: #E5EEE3; --ink-2: #9DB0A2;
+    --line: #2B3E31; --leaf: #5FC983; --leaf-ink: #08140C; --leaf-soft: #1C3A27;
+    --warn: #E8B04E; --warn-soft: #3A2D12; --bad: #F08A78; --bad-soft: #3E1D17; --muted-soft: #232B25;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1711; --surface: #16231A; --surface-2: #1F3025; --ink: #E5EEE3; --ink-2: #9DB0A2;
+  --line: #2B3E31; --leaf: #5FC983; --leaf-ink: #08140C; --leaf-soft: #1C3A27;
+  --warn: #E8B04E; --warn-soft: #3A2D12; --bad: #F08A78; --bad-soft: #3E1D17; --muted-soft: #232B25;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px calc(92px + env(safe-area-inset-bottom, 0px));
+}
+.app { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1, h2, h3, p { margin: 0; }
+h1, h2 { font-family: var(--f-display); font-weight: 700; text-wrap: balance; letter-spacing: -0.01em; }
+h1 { font-size: 22px; line-height: 1.2; }
+h2 { font-size: 17px; line-height: 1.25; }
+h3 { font-size: 15px; font-weight: 600; }
+.mono { font-family: var(--f-mono); }
+.kicker { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+.muted { color: var(--ink-2); }
+.small { font-size: 13px; }
+
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mark { font-family: var(--f-display); font-weight: 700; font-size: 15px; letter-spacing: 0.02em; display: flex; align-items: center; gap: 8px; }
+.mark svg { width: 24px; height: 24px; color: var(--leaf); flex: none; }
+.mark b { color: var(--leaf); font-weight: 700; }
+.pill { font-family: var(--f-mono); font-size: 11px; padding: 3px 8px; border-radius: 99px; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
+
+.tab[hidden] { display: none; }
+.tab { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card.flat { background: transparent; border-style: dashed; }
+
+/* viewfinder */
+.finder { position: relative; aspect-ratio: 4 / 5; max-width: 100%; border-radius: 6px; background: var(--surface-2); overflow: hidden; display: grid; place-items: center; }
+.finder img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.finder .empty { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 24px; color: var(--ink-2); max-width: 260px; }
+.finder .empty svg { width: 44px; height: 44px; color: var(--leaf); }
+.br { position: absolute; width: 28px; height: 28px; border: 3px solid var(--leaf); pointer-events: none; z-index: 2; }
+.br.tl { top: 12px; left: 12px; border-right: 0; border-bottom: 0; border-top-left-radius: 6px; }
+.br.tr { top: 12px; right: 12px; border-left: 0; border-bottom: 0; border-top-right-radius: 6px; }
+.br.bl { bottom: 12px; left: 12px; border-right: 0; border-top: 0; border-bottom-left-radius: 6px; }
+.br.brr { bottom: 12px; right: 12px; border-left: 0; border-top: 0; border-bottom-right-radius: 6px; }
+.sweep { position: absolute; left: 0; right: 0; height: 3px; background: var(--leaf); box-shadow: 0 0 18px 4px var(--leaf); opacity: 0.85; top: 0; animation: sweep 1.8s ease-in-out infinite alternate; z-index: 1; }
+@keyframes sweep { from { top: 4%; } to { top: 96%; } }
+@media (prefers-reduced-motion: reduce) { .sweep { animation: none; top: 50%; } }
+
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > * { flex: 1 1 140px; min-width: 0; }
+button, .btn { font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 11px 14px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; text-align: center; min-height: 44px; }
+button:hover, .btn:hover { border-color: var(--leaf); }
+button.primary, .btn.primary { background: var(--leaf); color: var(--leaf-ink); border-color: var(--leaf); font-weight: 600; }
+button.primary:hover { filter: brightness(1.06); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.ghost { background: transparent; }
+button.danger { color: var(--bad); }
+button.tiny { min-height: 32px; padding: 4px 10px; font-size: 13px; }
+:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }
+label.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+select, input[type="text"], input[type="number"], textarea { font: inherit; font-size: 15px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 44px; width: 100%; min-width: 0; }
+textarea { min-height: 150px; resize: vertical; line-height: 1.45; }
+
+.tips { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; }
+.tips li { display: flex; gap: 10px; align-items: baseline; }
+.tips li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--leaf); flex: none; transform: translateY(-2px); }
+
+.note { font-size: 13px; padding: 10px 12px; border-radius: 10px; background: var(--muted-soft); color: var(--ink-2); }
+.note.warn { background: var(--warn-soft); color: var(--warn); }
+.note.bad { background: var(--bad-soft); color: var(--bad); }
+
+/* result */
+.status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--f-mono); font-size: 12px; padding: 4px 10px; border-radius: 99px; align-self: flex-start; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.s-healthy { background: var(--leaf-soft); color: var(--leaf); }
+.s-disease-initial, .s-disease-moderate { background: var(--warn-soft); color: var(--warn); }
+.s-disease-severe { background: var(--bad-soft); color: var(--bad); }
+.s-uncertain { background: var(--muted-soft); color: var(--ink-2); }
+.res-head { display: grid; grid-template-columns: 84px 1fr; gap: 14px; align-items: start; }
+.res-head img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; background: var(--surface-2); }
+.conf { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; }
+.conf .num { font-family: var(--f-mono); font-size: 26px; font-weight: 500; line-height: 1; }
+.conf .bar { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.conf .bar i { display: block; height: 100%; background: var(--leaf); border-radius: 99px; }
+.conf .lbl { grid-column: 1 / -1; font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); letter-spacing: 0.06em; text-transform: uppercase; }
+.meter { display: flex; gap: 4px; align-items: center; }
+.meter i { width: 28px; height: 8px; border-radius: 3px; background: var(--surface-2); }
+.meter i.on-1 { background: var(--warn); } .meter i.on-3 { background: var(--bad); }
+.kv { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
+.kv > span:first-child { color: var(--ink-2); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 13px; padding: 4px 10px; border-radius: 99px; background: var(--surface-2); color: var(--ink); border: 0; min-height: 0; }
+button.chip { cursor: pointer; font-weight: 400; }
+button.chip[aria-pressed="true"] { background: var(--leaf); color: var(--leaf-ink); }
+.list { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.chem { border: 1px dashed var(--warn); border-radius: 10px; padding: 12px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
+.chem b { display: block; margin-bottom: 2px; }
+
+details { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+details summary { cursor: pointer; padding: 12px 14px; display: flex; justify-content: space-between; gap: 10px; align-items: center; font-weight: 600; list-style: none; min-height: 44px; }
+details summary::-webkit-details-marker { display: none; }
+details summary::after { content: "+"; font-family: var(--f-mono); color: var(--ink-2); }
+details[open] summary::after { content: "–"; }
+details .body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.lib { display: flex; flex-direction: column; gap: 8px; }
+.tag { font-family: var(--f-mono); font-size: 11px; font-weight: 400; color: var(--ink-2); background: var(--surface-2); padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+
+/* my field */
+.fields { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.fcard { text-align: left; align-items: flex-start; flex-direction: column; gap: 6px; padding: 12px 14px; min-height: 0; }
+.fcard[aria-pressed="true"] { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); }
+.fcard .name { font-weight: 600; }
+.dots { display: flex; gap: 5px; }
+.dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.dots i.healthy { background: var(--leaf); } .dots i.warn { background: var(--warn); } .dots i.bad { background: var(--bad); } .dots i.unk { background: var(--ink-2); opacity: 0.5; }
+.entry { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.entry:first-child { border-top: 0; }
+.entry .th { width: 56px; height: 56px; border-radius: 8px; background: var(--surface-2); object-fit: cover; display: grid; place-items: center; color: var(--ink-2); font-size: 11px; font-family: var(--f-mono); }
+.entry .t { font-weight: 600; font-size: 14px; }
+.entry .m { font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); }
+.formgrid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.formgrid .wide { grid-column: 1 / -1; }
+
+/* tab bar */
+nav.bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line);
+  padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+nav.bar .in { max-width: 520px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; }
+nav.bar button { flex-direction: column; gap: 3px; border: 0; background: transparent; font-size: 11px; padding: 6px 2px; min-height: 52px; color: var(--ink-2); border-radius: 10px; }
+nav.bar button svg { width: 22px; height: 22px; }
+nav.bar button[aria-selected="true"] { color: var(--leaf); background: var(--leaf-soft); font-weight: 600; }
+@media (max-width: 360px) { .formgrid { grid-template-columns: 1fr; } }
+header.top { flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M12 17c-3.5-.5-5-3-5-6 3.5 0 5.500 1.500 5 6zm0 0c.200-3.500 1.800-5.500 5-6 .300 3-1.500 5.500-5 6z"/></svg>
+      <span>AGRO SCAN <b>AI</b></span>
+    </div>
+    <button type="button" class="primary tiny" id="installBtn" hidden>Иловани ўрнатиш</button>
+    <span class="pill">Синов версияси</span>
+  </header>
+  <p class="note" id="iosHint" hidden>iPhone: Safari да «Улашиш» тугмасини босинг, кейин «Бош экранга қўшиш» ни танланг.</p>
+
+  <!-- 1. Суратга олиш -->
+  <section class="tab" id="tab-scan" data-tab="scan">
+    <div>
+      <p class="kicker">1 · Суратга олиш</p>
+      <h1>Баргни кадрга солинг</h1>
+      <p class="muted" style="margin-top:6px">Бир сурат — бир аниқ ечим!</p>
+    </div>
+    <div class="finder" id="finder">
+      <span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br brr"></span>
+      <img id="preview" alt="Танланган барг сурати" hidden>
+      <div class="empty" id="finderEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14z"/><path d="M5 19c3-4 6-7 10-9"/></svg>
+        <span>Касал қисми кўриниб турган баргни кадр ичига жойлаштиринг</span>
+      </div>
+    </div>
+    <div class="row">
+      <button class="primary" type="button" id="btnCam">Камера</button>
+      <button type="button" id="btnPick">Галереядан танлаш</button>
+    </div>
+    <input id="photoCam" type="file" accept="image/*" capture="environment" hidden>
+    <input id="photoPick" type="file" accept="image/*" hidden>
+    <div class="card">
+      <div class="row">
+        <label class="field" for="cropSel">Ўсимлик тури
+          <select id="cropSel"></select>
+        </label>
+        <label class="field" for="fieldSel">Дала
+          <select id="fieldSel"></select>
+        </label>
+      </div>
+      <button class="primary" type="button" id="analyzeBtn" disabled>Таҳлил қилиш</button>
+      <p class="note" id="availNote" hidden></p>
+    </div>
+    <div class="card flat">
+      <h3>Аниқ натижа учун</h3>
+      <ul class="tips">
+        <li>Табиий кундузги ёруғликда суратга олинг, фонарь ва соя ёмон.</li>
+        <li>Барг кадрнинг ярмидан кўпини эгалласин, сурат ўткир бўлсин.</li>
+        <li>Ҳам касал, ҳам соғлом қисм кўринсин. Баргнинг орқа томони ҳам муҳим бўлиши мумкин.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 2. AI таҳлил -->
+  <section class="tab" id="tab-analysis" data-tab="analysis" hidden></section>
+  <!-- 3. Тавсиялар -->
+  <section class="tab" id="tab-advice" data-tab="advice" hidden></section>
+  <!-- 4. Менинг далам -->
+  <section class="tab" id="tab-field" data-tab="field" hidden></section>
+  <!-- 5. Агроном -->
+  <section class="tab" id="tab-agronomist" data-tab="agronomist" hidden></section>
+</div>
+
+<nav class="bar" aria-label="Бўлимлар">
+  <div class="in" role="tablist">
+    <button type="button" role="tab" data-go="scan" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M3 12h18"/></svg>Сурат</button>
+    <button type="button" role="tab" data-go="analysis" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Таҳлил</button>
+    <button type="button" role="tab" data-go="advice" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7M9 8h3"/></svg>Тавсия</button>
+    <button type="button" role="tab" data-go="field" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20l4-9h10l4 9z"/><path d="M12 11V4M12 4l-3 3M12 4l3 3"/></svg>Далам</button>
+    <button type="button" role="tab" data-go="agronomist" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-5 4v-4H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>Агроном</button>
+  </div>
+</nav>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Маълумотлар базаси (қоралама, агроном тасдиғини кутмоқда) ---------- */
+  var CROPS = {};
+  var DB_APPROVED = false;
+  var DISEASES = [];
+  var DIS = {};
+  var SEV = { initial: { n: "Бошланғич", lv: 1 }, moderate: { n: "Ўрта", lv: 2 }, severe: { n: "Кучли", lv: 3 } };
+
+  /* ---------- Ҳолат ---------- */
+  var LS_KEY = "agroscan.v1";
+  var fields = [{ id: "f1", name: "1-дала", crop: "cotton", area: "" }];
+  var history = [];
+  try {
+    var saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+    if (saved && Array.isArray(saved.fields) && saved.fields.length) { fields = saved.fields; history = saved.history || []; }
+  } catch (e) {}
+  function persist() { try { localStorage.setItem(LS_KEY, JSON.stringify({ fields: fields, history: history })); } catch (e) {} }
+
+  var state = { phase: "idle", photo: null, result: null, resultCrop: "auto", resultField: "f1", saved: false, error: "", libCrop: "all", fieldFilter: "all", showAdd: false, msgEdited: false, ctl: null };
+  
+  /* ---------- Ёрдамчилар ---------- */
+  function $(s, r) { return (r || document).querySelector(s); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function fmt(ts) { var d = new Date(ts); return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function fieldName(id) { var f = fields.filter(function (x) { return x.id === id; })[0]; return f ? f.name : "Дала белгиланмаган"; }
+  function statusClass(r) { return r.status === "healthy" ? "s-healthy" : r.status === "disease" ? "s-disease-" + (r.severity || "moderate") : "s-uncertain"; }
+  function statusText(r) { return r.status === "healthy" ? "Соғлом" : r.status === "disease" ? "Касаллик эҳтимоли" : "Аниқ эмас"; }
+  function titleOf(r) { return r.diseaseId ? DIS[r.diseaseId].name : r.status === "healthy" ? "Барг соғлом кўринади" : "Аниқ хулоса чиқмади"; }
+  function dotClass(e) { return e.status === "healthy" ? "healthy" : e.status === "disease" ? (e.severity === "severe" ? "bad" : "warn") : "unk"; }
+  function meter(sev) {
+    var lv = sev && SEV[sev] ? SEV[sev].lv : 0;
+    return '<span class="meter" aria-hidden="true">' + [1, 2, 3].map(function (i) { return '<i class="' + (i <= lv ? "on-" + lv : "") + '"></i>'; }).join("") + "</span>";
+  }
+
+  /* ---------- Бўлимлар ва навигация ---------- */
+  var TABS = ["scan", "analysis", "advice", "field", "agronomist"];
+  function showTab(name) {
+    if (TABS.indexOf(name) < 0) name = "scan";
+    TABS.forEach(function (t) { $("#tab-" + t).hidden = t !== name; });
+    document.querySelectorAll("nav.bar [data-go]").forEach(function (b) { b.setAttribute("aria-selected", b.dataset.go === name ? "true" : "false"); });
+    if (name === "analysis") renderAnalysis();
+    if (name === "advice") renderAdvice();
+    if (name === "field") renderField();
+    if (name === "agronomist") renderAgro();
+    window.scrollTo(0, 0);
+  }
+  function go(name) { if (location.hash.slice(1) === name) showTab(name); else location.hash = name; }
+  window.addEventListener("hashchange", function () { showTab(location.hash.slice(1)); });
+
+  /* ---------- 1. Суратга олиш ---------- */
+  function fillSelects() {
+    var cs = $("#cropSel"), cv = cs.value || "auto";
+    cs.innerHTML = '<option value="auto">Автоматик аниқлаш</option>' + Object.keys(CROPS).map(function (k) { return '<option value="' + k + '">' + CROPS[k].name + "</option>"; }).join("");
+    cs.value = cv;
+    var fs = $("#fieldSel"), fv = fs.value || fields[0].id;
+    fs.innerHTML = fields.map(function (f) { return '<option value="' + esc(f.id) + '">' + esc(f.name) + "</option>"; }).join("");
+    fs.value = fields.some(function (f) { return f.id === fv; }) ? fv : fields[0].id;
+  }
+  function updateAnalyzeBtn() {
+    var b = $("#analyzeBtn"), n = $("#availNote");
+    b.disabled = !(state.photo && navigator.onLine) || state.phase === "loading";
+    if (!navigator.onLine) { n.hidden = false; n.className = "note warn"; n.textContent = "Таҳлил учун интернет керак. Тарих ва касалликлар китоби интернетсиз ҳам очилади."; }
+    else n.hidden = true;
+  }
+  function loadPhoto(file) {
+    if (!file) return;
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var sc = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+      var c = document.createElement("canvas"); c.width = Math.max(1, Math.round(img.naturalWidth * sc)); c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      var t = document.createElement("canvas"), ts = Math.min(1, 132 / Math.max(c.width, c.height));
+      t.width = Math.max(1, Math.round(c.width * ts)); t.height = Math.max(1, Math.round(c.height * ts));
+      t.getContext("2d").drawImage(c, 0, 0, t.width, t.height);
+      c.toBlob(function (blob) {
+        if (!blob) return;
+        if (state.photo) URL.revokeObjectURL(state.photo.url);
+        state.photo = { url: url, blob: blob, thumb: t.toDataURL("image/jpeg", 0.6) };
+        var p = $("#preview"); p.src = url; p.hidden = false; $("#finderEmpty").hidden = true;
+        updateAnalyzeBtn();
+      }, "image/jpeg", 0.86);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); var n = $("#availNote"); n.hidden = false; n.className = "note bad"; n.textContent = "Суратни ўқиб бўлмади. Бошқа сурат танланг."; };
+    img.src = url;
+  }
+  $("#btnCam").addEventListener("click", function () { $("#photoCam").click(); });
+  $("#btnPick").addEventListener("click", function () { $("#photoPick").click(); });
+  $("#photoCam").addEventListener("change", function (e) { loadPhoto(e.target.files[0]); e.target.value = ""; });
+  $("#photoPick").addEventListener("change", function (e) { loadPhoto(e.target.files[0]); e.target.value = ""; });
+
+  /* ---------- 2. AI таҳлил ---------- */
+  function blobToBase64(blob) {
+    return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () { res(String(fr.result).split(",")[1]); };
+      fr.onerror = function () { rej({ code: "image_rejected" }); };
+      fr.readAsDataURL(blob);
+    });
+  }
+  function callApi(crop, blob, signal) {
+    return blobToBase64(blob).then(function (b64) {
+      return fetch("api/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ crop: crop, image: b64 }), signal: signal });
+    }).then(function (resp) {
+      if (resp.status === 429) throw { code: "rate_limited" };
+      if (resp.status === 422) throw { code: "invalid_json" };
+      if (!resp.ok) throw { code: "upstream_error" };
+      return resp.json();
+    }).then(function (j) { return j.data; }, function (e) {
+      if (e && e.name === "AbortError") throw { code: "cancelled" };
+      if (e && e.code) throw e;
+      throw { code: "upstream_error" };
+    });
+  }
+  function normalize(d) {
+    d = d || {};
+    var status = ["healthy", "disease", "uncertain"].indexOf(d.status) >= 0 ? d.status : "uncertain";
+    var did = DIS[d.disease_id] ? d.disease_id : null;
+    if (status === "disease" && !did) status = "uncertain";
+    if (status !== "disease") did = null;
+    var conf = Math.max(0, Math.min(100, Math.round(Number(d.confidence) || 0)));
+    var sev = SEV[d.severity] && status === "disease" ? d.severity : null;
+    var crop = did ? DIS[did].crop : (CROPS[d.crop_id] ? d.crop_id : null);
+    var poor = d.photo_quality === "poor" || d.plant_visible === false;
+    if (poor && status === "disease" && conf >= 60) conf = 59;
+    return {
+      status: status, diseaseId: did, confidence: conf, severity: sev, cropId: crop, poor: poor,
+      issue: d.plant_visible === false ? "Суратда ўсимлик барги кўринмади." : (d.photo_issue || ""),
+      signs: (Array.isArray(d.signs) ? d.signs : []).slice(0, 3).map(String),
+      alts: (Array.isArray(d.alternatives) ? d.alternatives : []).filter(function (x) { return DIS[x] && x !== did; }).slice(0, 2),
+      note: d.note ? String(d.note) : "", ts: Date.now()
+    };
+  }
+  function errCopy(code) {
+    return ({
+      not_granted: "AI таҳлилга рухсат берилмади. Саҳифани янгиланг ва рухсатни тасдиқланг.",
+      rate_limited: "Жуда кўп сўров юборилди. Бироз кутиб, қайта уриниб кўринг.",
+      image_rejected: "Суратни AI қабул қилмади. Бошқа сурат танланг.",
+      invalid_json: "Жавобни ўқиб бўлмади. Суратни қайта олиб, яна уриниб кўринг.",
+      session_expired: "Сеанс тугаган. Қайта киринг.",
+      refused: "Бу суратни таҳлил қилиб бўлмади. Бошқа барг суратини юборинг."
+    })[code] || "Таҳлил вақтида узилиш бўлди. Қайта уриниб кўринг.";
+  }
+  function analyze() {
+    if (!state.photo) return;
+    var crop = $("#cropSel").value, fid = $("#fieldSel").value;
+    state.phase = "loading"; state.result = null; state.saved = false; state.error = ""; state.resultCrop = crop; state.resultField = fid; state.msgEdited = false;
+    state.ctl = new AbortController();
+    updateAnalyzeBtn(); go("analysis"); renderAnalysis();
+    callApi(crop, state.photo.blob, state.ctl.signal).then(function (data) {
+      var r = normalize(data); r.thumb = state.photo.thumb;
+      state.result = r; state.phase = "done"; updateAnalyzeBtn(); renderAnalysis();
+    }).catch(function (e) {
+      if (e && e.code === "cancelled") { state.phase = state.result ? "done" : "idle"; }
+      else { state.phase = "error"; state.error = errCopy(e && e.code); }
+      updateAnalyzeBtn(); renderAnalysis();
+    });
+  }
+  $("#analyzeBtn").addEventListener("click", analyze);
+
+  function renderAnalysis() {
+    var el = $("#tab-analysis"), head = '<div><p class="kicker">2 · AI таҳлил</p><h1>Касаллик ва аломатлар</h1></div>';
+    if (state.phase === "loading" && state.photo) {
+      el.innerHTML = head + '<div class="finder"><span class="br tl"></span><span class="br tr"></span><span class="br bl"></span><span class="br brr"></span><img alt="Таҳлил қилинаётган барг" src="' + esc(state.photo.url) + '"><span class="sweep"></span></div>' +
+        '<div class="card"><h3>Барг таҳлил қилинмоқда…</h3><p class="muted small">Одатда 10–40 сония кетади. Ортиқча тугмаларни босмай туринг.</p><button type="button" data-act="cancel">Тўхтатиш</button></div>';
+      return;
+    }
+    if (state.phase === "error") {
+      el.innerHTML = head + '<div class="card"><p class="note bad">' + esc(state.error) + '</p><div class="row"><button class="primary" type="button" data-act="retry">Қайта таҳлил</button><button type="button" data-go="scan">Бошқа сурат</button></div></div>';
+      return;
+    }
+    if (state.phase !== "done" || !state.result) {
+      el.innerHTML = head + '<div class="card flat"><p class="muted">Ҳали таҳлил йўқ. Баргни суратга олинг, натижа шу ерда чиқади.</p><button class="primary" type="button" data-go="scan">Суратга олиш</button></div>';
+      return;
+    }
+    var r = state.result, d = r.diseaseId ? DIS[r.diseaseId] : null;
+    var cropTxt = r.cropId && CROPS[r.cropId] ? CROPS[r.cropId].name : (r.cropId === "other" ? "Рўйхатда йўқ экин" : "Экин аниқланмади");
+    var h = head;
+    if (r.poor) h += '<p class="note warn"><b>Сурат сифати паст.</b> ' + esc(r.issue || "Баргни яқинроқдан, ёруғда қайта олинг.") + '</p>';
+    h += '<div class="card"><div class="res-head"><img alt="Текширилган барг" src="' + esc(r.thumb || "") + '"><div style="display:flex;flex-direction:column;gap:6px;min-width:0"><span class="status ' + statusClass(r) + '">' + statusText(r) + '</span><h2>' + esc(titleOf(r)) + '</h2><span class="muted small">' + esc(cropTxt) + (d ? " · " + esc(d.kind) : "") + '</span></div></div>' +
+      '<div class="conf"><span class="num">' + r.confidence + '%</span><div class="bar"><i style="width:' + r.confidence + '%"></i></div><span class="lbl">AI ишонч даражаси</span></div>';
+    if (r.status === "disease") h += '<div class="kv"><span>Ривожланиш даражаси</span><span style="display:flex;gap:10px;align-items:center">' + meter(r.severity) + '<b>' + (r.severity ? SEV[r.severity].n : "Аниқ эмас") + '</b></span></div>';
+    h += "</div>";
+    if (r.signs.length) h += '<div class="card"><h3>Суратда нима кўринди</h3><ul class="list">' + r.signs.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + "</ul>" + (r.note ? '<p class="muted small">' + esc(r.note) + "</p>" : "") + "</div>";
+    else if (r.note) h += '<div class="card"><p>' + esc(r.note) + "</p></div>";
+    if (r.alts.length) h += '<div class="card"><h3>Бошқа эҳтимоллар</h3><div class="chips">' + r.alts.map(function (a) { return '<span class="chip">' + esc(DIS[a].name) + "</span>"; }).join("") + '</div><p class="muted small">Шу аломатлар бошқа касалликда ҳам учраши мумкин. Шубҳа бўлса, агроном билан текширинг.</p></div>';
+    h += '<div class="row"><button class="primary" type="button" data-go="advice">Тавсияларни кўриш</button><button type="button" data-act="save"' + (state.saved ? " disabled" : "") + ">" + (state.saved ? "Далага сақланди" : "Далага сақлаш") + '</button><button type="button" data-go="agronomist">Агрономга юбориш</button></div>';
+    h += '<p class="note">AI хулосаси лаборатория ташхиси ўрнини босмайди. Кимёвий воситалар бўйича қарорни фақат агроном билан қабул қилинг.</p>';
+    el.innerHTML = h;
+  }
+
+  /* ---------- 3. Тавсиялар ---------- */
+  function renderAdvice() {
+    var el = $("#tab-advice"), r = state.result, h = '<div><p class="kicker">3 · Тавсиялар</p><h1>Нима қилиш керак</h1></div>';
+    h += DB_APPROVED ? "" : '<p class="note warn">Тавсиялар қораламада. Агроном тасдиқлагунча уларни йўл-йўриқ сифатида қабул қилинг.</p>';
+    if (state.phase === "done" && r && r.diseaseId) {
+      var d = DIS[r.diseaseId];
+      h += '<div class="card"><span class="status ' + statusClass(r) + '">' + esc(d.name) + '</span><h3>Ҳозир қилинг</h3><ul class="list">' + d.actions.map(function (a) { return "<li>" + esc(a) + "</li>"; }).join("") + '</ul>' +
+        '<h3>Кейинги текширув</h3><p>' + esc(d.followUp) + '</p>' +
+        '<div class="chem"><b>Кимёвий воситалар</b>Агроном тасдиқлаган восита рўйхати базага ҳали киритилмаган. Восита ва дозани ўзингиз танламанг, агроном тавсиясини кутинг.</div>' +
+        '<button class="primary" type="button" data-go="agronomist">Агроном билан боғланиш</button></div>';
+    } else if (state.phase === "done" && r && r.status === "healthy") {
+      h += '<div class="card"><h3>Барг соғлом кўринади</h3><p>Дала бўйлаб бошқа жойлардан ҳам намуна олиб кўринг. Касаллик баъзан дала четидан ёки паст жойдан бошланади. Суғоришни бир маромда тутинг ва 7–10 кундан кейин яна текширинг.</p></div>';
+    } else if (state.phase === "done" && r) {
+      h += '<div class="card"><h3>Хулоса аниқ эмас</h3><p>Баргни ёруғда яқиндан қайта суратга олинг, касал ва соғлом қисм бирга кўринсин. Шундан кейин ҳам аниқ бўлмаса, агрономга юборинг.</p><div class="row"><button class="primary" type="button" data-go="scan">Қайта суратга олиш</button><button type="button" data-go="agronomist">Агрономга юбориш</button></div></div>';
+    } else {
+      h += '<div class="card flat"><p class="muted">Таҳлилдан кейин тавсия шу ерда пайдо бўлади. Пастда эса барча касалликлар рўйхатини кўришингиз мумкин.</p></div>';
+    }
+    h += '<div><h2>Касалликлар китоби</h2></div><div class="chips" role="group" aria-label="Экин бўйича фильтр"><button type="button" class="chip" data-lib="all" aria-pressed="' + (state.libCrop === "all") + '">Ҳаммаси</button>' +
+      Object.keys(CROPS).map(function (k) { return '<button type="button" class="chip" data-lib="' + k + '" aria-pressed="' + (state.libCrop === k) + '">' + CROPS[k].name + "</button>"; }).join("") + "</div>";
+    h += '<div class="lib">' + DISEASES.filter(function (d) { return state.libCrop === "all" || d.crop === state.libCrop; }).map(function (d) {
+      return '<details><summary><span>' + esc(d.name) + '</span><span class="tag">' + esc(CROPS[d.crop].name) + '</span></summary><div class="body"><div><b class="small">Одатий аломатлар</b><p class="muted small">' + esc(d.signs) + '</p></div><div><b class="small">Агротехник чоралар</b><ul class="list small">' + d.actions.map(function (a) { return "<li>" + esc(a) + "</li>"; }).join("") + "</ul></div></div></details>";
+    }).join("") + "</div>";
+    el.innerHTML = h;
+  }
+
+  /* ---------- 4. Менинг далам ---------- */
+  var DEMO = [
+    { id: "d1", ts: Date.now() - 86400000 * 9, fieldId: "f1", cropId: "cotton", status: "healthy", diseaseId: null, confidence: 88, severity: null, demo: true },
+    { id: "d2", ts: Date.now() - 86400000 * 3, fieldId: "f1", cropId: "cotton", status: "disease", diseaseId: "cotton_mite", confidence: 71, severity: "initial", demo: true }
+  ];
+  function renderField() {
+    var el = $("#tab-field"), real = history.length > 0, items = real ? history : DEMO;
+    var h = '<div><p class="kicker">4 · Менинг далам</p><h1>Дала ва кузатувлар тарихи</h1></div>';
+    h += '<div class="fields">' + fields.map(function (f) {
+      var es = history.filter(function (e) { return e.fieldId === f.id; });
+      var last = es.slice(0, 6).reverse();
+      var shown = real ? last : DEMO.filter(function (e) { return e.fieldId === f.id; });
+      return '<button type="button" class="fcard" data-ff="' + esc(f.id) + '" aria-pressed="' + (state.fieldFilter === f.id) + '"><span class="name">' + esc(f.name) + '</span><span class="muted small">' + esc(CROPS[f.crop] ? CROPS[f.crop].name : "") + (f.area ? " · " + esc(f.area) + " га" : "") + '</span><span class="dots" aria-label="Охирги текширувлар">' + shown.map(function (e) { return '<i class="' + dotClass(e) + '"></i>'; }).join("") + '</span><span class="muted small">' + (real ? es.length + " та текширув" : "Намуна маълумот") + "</span></button>";
+    }).join("") + "</div>";
+    h += '<div class="row"><button type="button" data-act="toggleAdd">' + (state.showAdd ? "Бекор қилиш" : "Дала қўшиш") + "</button>" + (state.fieldFilter !== "all" ? '<button type="button" class="ghost" data-ff="all">Ҳамма далалар</button>' : "") + "</div>";
+    if (state.showAdd) {
+      h += '<form class="card" id="addForm"><div class="formgrid"><label class="field wide" for="nfName">Дала номи<input type="text" id="nfName" required maxlength="40" placeholder="Масалан: Шарқ даласи"></label>' +
+        '<label class="field" for="nfCrop">Экин<select id="nfCrop">' + Object.keys(CROPS).map(function (k) { return '<option value="' + k + '">' + CROPS[k].name + "</option>"; }).join("") + '</select></label>' +
+        '<label class="field" for="nfArea">Майдон, га<input type="number" id="nfArea" min="0" step="0.1" placeholder="2.5"></label></div><button class="primary" type="submit">Қўшиш</button></form>';
+    }
+    var list = items.filter(function (e) { return state.fieldFilter === "all" || e.fieldId === state.fieldFilter; });
+    h += '<div class="card">' + (real ? "" : '<p class="note">Бу намуна маълумотлар. Биринчи ҳақиқий текширувни сақласангиз, улар йўқолади.</p>') + (list.length ? list.map(function (e) {
+      var title = e.diseaseId ? DIS[e.diseaseId].name : e.status === "healthy" ? "Соғлом" : "Аниқ эмас";
+      return '<div class="entry">' + (e.thumb ? '<img class="th" alt="" src="' + esc(e.thumb) + '">' : '<span class="th">' + (e.demo ? "НАМУНА" : "—") + "</span>") +
+        '<div><div class="t">' + esc(title) + '</div><div class="m">' + esc(fieldName(e.fieldId)) + " · " + fmt(e.ts) + " · " + e.confidence + "%" + (e.severity ? " · " + SEV[e.severity].n : "") + "</div></div>" +
+        (e.demo ? "" : '<button type="button" class="tiny danger" data-del="' + esc(e.id) + '" aria-label="Ёзувни ўчириш">Ўчириш</button>') + "</div>";
+    }).join("") : '<p class="muted">Бу далада ҳали текширув йўқ.</p>') + "</div>";
+    h += '<p class="note">Тарих шу қурилмада, шу браузерда сақланади. Кейинги босқичда ҳисоб ва сервер орқали барча қурилмаларда кўринади.</p>';
+    el.innerHTML = h;
+    var f = $("#addForm");
+    if (f) f.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var name = $("#nfName").value.trim(); if (!name) return;
+      fields.push({ id: "f" + Date.now(), name: name, crop: $("#nfCrop").value, area: $("#nfArea").value });
+      state.showAdd = false; persist(); fillSelects(); renderField();
+    });
+  }
+
+  /* ---------- 5. Агроном ---------- */
+  function draftMessage() {
+    var r = state.result, crop = $("#cropSel").value;
+    if (state.phase === "done" && r) {
+      var cn = r.cropId && CROPS[r.cropId] ? CROPS[r.cropId].name : (crop !== "auto" ? CROPS[crop].name : "ўсимлик");
+      return "Ассалому алайкум! AGRO SCAN AI орқали " + cn + " баргини текширдим.\nДала: " + fieldName(state.resultField) + "\nНатижа: " + titleOf(r) + " (ишонч " + r.confidence + "%" + (r.severity ? ", ривожланиш: " + SEV[r.severity].n.toLowerCase() : "") + ").\nСуратни қўшиб юбораман. Қандай чора кўриш керак?";
+    }
+    return "Ассалому алайкум! Далада ўсимликда муаммо кўрдим.\nЭкин: \nДала: \nНимани кўряпман: \nСуратни қўшиб юбораман.";
+  }
+  function tgHref(t) { return "https://t.me/share/url?url=%20&text=" + encodeURIComponent(t); }
+  var msgText = "";
+  function renderAgro() {
+    var el = $("#tab-agronomist");
+    if (!state.msgEdited) msgText = draftMessage();
+    el.innerHTML = '<div><p class="kicker">5 · Агроном</p><h1>Мутахассисга савол</h1><p class="muted" style="margin-top:6px">Тайёр хабарни тахрир қилинг ва агрономга юборинг. Суратни ўзингиз илова қиласиз.</p></div>' +
+      '<div class="card"><label class="field" for="msg">Хабар матни<textarea id="msg"></textarea></label><div class="row"><a class="btn primary" id="tgLink" target="_blank" rel="noopener">Telegram орқали юбориш</a><button type="button" id="copyBtn">Нусха олиш</button></div><p class="muted small" id="copyNote" aria-live="polite"></p></div>' +
+      '<p class="note">Ҳозир хабар ўзингиз танлаган агрономга Telegram орқали юборилади. Кейинги босқичда лойиҳанинг ўз агрономлар каналига уланади.</p>';
+    var ta = $("#msg"); ta.value = msgText; $("#tgLink").href = tgHref(msgText);
+    ta.addEventListener("input", function () { state.msgEdited = true; msgText = ta.value; $("#tgLink").href = tgHref(msgText); });
+    $("#copyBtn").addEventListener("click", function () {
+      var n = $("#copyNote");
+      function fallback() { ta.focus(); ta.select(); n.textContent = "Матн белгиланди. Нусха олиш учун қурилмангиздаги «Нусха олиш» ни босинг."; }
+      try { navigator.clipboard.writeText(ta.value).then(function () { n.textContent = "Нусха олинди."; }, fallback); } catch (e) { fallback(); }
+    });
+  }
+
+  /* ---------- Умумий ҳодисалар ---------- */
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-go],[data-act],[data-lib],[data-ff],[data-del]");
+    if (!t) return;
+    if (t.dataset.go) { go(t.dataset.go); return; }
+    if (t.dataset.lib) { state.libCrop = t.dataset.lib; renderAdvice(); return; }
+    if (t.dataset.ff) { state.fieldFilter = (state.fieldFilter === t.dataset.ff && t.dataset.ff !== "all") ? "all" : t.dataset.ff; renderField(); return; }
+    if (t.dataset.del) { history = history.filter(function (x) { return x.id !== t.dataset.del; }); persist(); renderField(); return; }
+    var a = t.dataset.act;
+    if (a === "cancel" && state.ctl) state.ctl.abort();
+    else if (a === "retry") analyze();
+    else if (a === "toggleAdd") { state.showAdd = !state.showAdd; renderField(); }
+    else if (a === "save" && state.result && !state.saved) {
+      var r = state.result;
+      history.unshift({ id: "h" + Date.now(), ts: r.ts, fieldId: state.resultField, cropId: r.cropId, status: r.status, diseaseId: r.diseaseId, confidence: r.confidence, severity: r.severity, thumb: r.thumb });
+      history = history.slice(0, 40); state.saved = true; persist(); renderAnalysis();
+    }
+  });
+
+  /* ---------- Ишга тушириш ---------- */
+  function init() { fillSelects(); showTab(location.hash.slice(1) || "scan"); updateAnalyzeBtn(); }
+  window.addEventListener("online", updateAnalyzeBtn);
+  window.addEventListener("offline", updateAnalyzeBtn);
+  fetch("diseases.json").then(function (r) { return r.json(); }).then(function (db) {
+    CROPS = db.crops; DB_APPROVED = !!db.approved; DISEASES = db.diseases; DIS = {};
+    DISEASES.forEach(function (d) { DIS[d.id] = d; });
+    init();
+  }).catch(function () {
+    $(".app").insertAdjacentHTML("beforeend", '<p class="note bad">Маълумотлар базасини юклаб бўлмади. Интернетни текширинг ва саҳифани янгиланг.</p>');
+  });
+
+  var deferred = null;
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; $("#installBtn").hidden = false; });
+  $("#installBtn").addEventListener("click", function () {
+    if (!deferred) return;
+    deferred.prompt();
+    deferred.userChoice.then(function () { deferred = null; $("#installBtn").hidden = true; });
+  });
+  window.addEventListener("appinstalled", function () { $("#installBtn").hidden = true; });
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone;
+  if (isIOS && !standalone) $("#iosHint").hidden = false;
+  if ("serviceWorker" in navigator) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+})();
+</script>
+</body>
+</html>
